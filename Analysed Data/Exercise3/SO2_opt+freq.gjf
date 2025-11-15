@@ -1,0 +1,17 @@
+%mem=6GB
+%chk=C:\Users\al6323\OneDrive - Imperial College London\Desktop\TSR20251115\SO2_opt+freq.chk
+%nprocshared=8
+# opt=(calcfc,tight,cartesian,maxcycles=200,maxstep=5) freq rpm6 nosymm
+geom=connectivity scf=(xqc,verytight)
+
+Title Card Required
+
+0 1
+ S                 -1.56939616   -0.34980843    0.00000000
+ O                 -0.86334193    0.93907154    0.00000000
+ O                 -0.80622047   -1.60570932    0.00000000
+
+ 1 2 2.0 3 2.0
+ 2
+ 3
+
