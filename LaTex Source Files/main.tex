@@ -1,0 +1,816 @@
+\documentclass[a4paper,11pt,twocolumn]{article}
+
+% =======================
+% Packages
+% =======================
+\usepackage{amsmath, amssymb, amsthm, physics}
+\usepackage{graphicx}
+\usepackage{caption}
+\captionsetup{font=small}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{gensymb}
+\usepackage{booktabs}
+\usepackage{fancyhdr} % For custom headers/footers
+\usepackage{indentfirst}
+\usepackage[numbers]{natbib}  % if you want to control options explicitly
+\setcitestyle{numbers,square}
+
+\geometry{left=1in, right=1in, top=1in, bottom=1in}
+\setlength{\parindent}{0.3in}
+\sloppy
+
+% =======================
+% Header / Footer
+% =======================
+\pagestyle{fancy}
+\fancyhf{}                      % clear all
+\lhead{Computational Lab Report}
+\rhead{Angze Li (CID: 02372394)}
+\cfoot{\thepage}
+
+\makeatletter
+\let\ps@plain\ps@fancy          % now plain = fully configured fancy
+\makeatother
+% =======================
+% Title
+% =======================
+\title{\textbf{Computational Lab Report: \\
+Transition State Reactivity}}
+\author{Angze Li, CID: 02373494 \\
+    Department of Chemistry, Imperial College London}
+
+\begin{document}
+
+\maketitle
+
+% Abstract
+\noindent
+\twocolumn[
+\begin{@twocolumnfalse}
+\maketitle
+\begin{abstract}
+In this study, three representative pericyclic reaction systems (butadiene-ethene, cyclohexadiene-1,3-dioxole and \textit{o}-xylyene-SO$_2$) were explored by computational simulation using \textit{Gaussian} under semi-empirical PM6 and DFT B3LYP/6-31G(d) levels of theory. The optimised structures across the reactions,  including the transition states (TS) and their molecular orbitals (MO) were simulated, and intrinsic reaction coordinates (IRC) and thermodynamic properties were computed at each theory level. It is found that while both methods yielded fairly good geometric simulations with almost all bond length differences within 10$^{-3}$~\AA{} range compared to experimental values, PM6 offers substantially higher efficiency at the cost of reduced accuracy, whereas B3LYP, on the other hand, provides more reliable electronic and energy calculations. However, neither method accurately captures the activation free energies due to the limitations of the theories, and the results in thermochemistry can not be viewed quantitatively, since the system is greatly simplified compared to the practical reactions. Notably, the \textit{o}-xylylene–SO$_2$ reaction also displayed a highly exergonic cheletropic channel. Overall, the simulations reproduced the qualitative trends of the reactions, providing key insights into the reactivity and selectivity of the pericyclic systems.
+\end{abstract}
+\end{@twocolumnfalse}
+]
+
+\vspace{1em}
+
+% =========================================================
+\section{Introduction}  % ~20\% of total marks
+
+Pericyclic reactions are reactions involving cyclic TS where bonds form and cleave simultaneously. This type of reaction has emerged as the third important class of reactions in organic chemistry, apart from ionic and radical reactions~\cite{fleming2015pericyclic}. The mechanisms of pericyclic reactions can be predicted \textit{a priori} by quantum mechanics~\cite{dewar1992mechanisms}. This approach, however, relied on the development of computational chemistry due to the complexities of the systems, which require advanced theories and computational resources.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Figures/Potential_Energy_Surface_for_Water.png}
+    \captionsetup{width=0.8\linewidth}
+    \caption{An example illustration of PES. Figure taken from \cite{PES}.}
+    \label{fig:ExamplePES}
+\end{figure}
+
+The potential energy surface (PES), which maps molecular energy as a function of nuclear geometries, plays a central role in computational chemistry since it provides the foundation for understanding how changes in chemical structure lead to changes in potential energy~\cite{erol2025variational}, enabling further determination of various properties of interest. An illustrative example of PES is shown in Figure~\ref{fig:ExamplePES}. 
+
+
+Mathematically, molecular geometry can be represented by a vector of atomic coordinates $\mathbf{r}$, and the potential energy $E(\mathbf{r})$ is then defined for every possible arrangement. A \textit{stationary point} on a PES is a geometry at which the first derivative of the potential energy with respect to each internal coordinate $q$ is zero:
+
+$$\frac{\partial E}{\partial q_1}=\frac{\partial E}{\partial q_2}=\cdots=0.$$
+Different classes of stationary points correspond directly to different types of chemical structures or events. The \textit{energy minima}, defined by Volkan \cite{erol2025variational} as stationary points with a finite lifetime, correspond to stable molecules, i.e., reactants, intermediates, and products. A minimum is characterised by positive curvature in all directions:
+
+$$\frac{\partial^2 E}{\partial q^2}>0\ \text{for all}\ q. $$
+
+TS lies at the highest point along the lowest-energy pathway connecting two minima, known as the IRC. Mathematically, TS is a first-order saddle point where
+$$\frac{\partial^2 E}{\partial q^2}>0\ \text{for all}\ q\ \text{except one}, $$
+and for that $q$, the negative curvature
+$$\frac{\partial^2 E}{\partial q^2}<0$$
+corresponds to the reaction coordinate. Chemically, this curvature represents the atomic motion that converts one minimum (e.g., reactants) into another (e.g., products), while all orthogonal directions remain constrained.
+
+Thus, key insights into the chemistry can be obtained from the characterisation of the PES, where i) minima correspond to observed species with finite lifetimes, ii) saddle points correspond to TS, controlling kinetics through barrier heights, iii) IRC maps the nuclear motions during the reaction, and iv) relative depths of minima define reaction thermodynamics.
+
+Determining the geometry and energy that define a PES requires solving the Schrödinger equation at each molecular configuration. In practice, this can be achieved by quantum-chemical methods which, in most applications to molecular systems, employ the MO framework. In wavefunction-based methods (e.g., \textit{ab initio} and semi-empirical approaches), the electronic energy is obtained by constructing and optimising an approximated many-electron wavefunction. In contrast, density-functional theory (DFT) optimises the electron density but still relies on Kohn–Sham MO as auxiliary quantities. Each method illustrated above comes with different approximations and algorithms, leading to varying levels of computational cost and accuracy. Once PES is constructed using these methods, various properties (e.g., minima, TS, MO, barrier heights) can be determined with ease.
+
+Several key approximations are adopted in semi-empirical methods~\cite{pariser1953semi,dewar1977ground}. Firstly, only the valence electrons are treated explicitly, with the effects of core electrons incorporated into empirical parameters. Secondly, these methods employ a minimal basis set, which typically (but not all) consists of full valence orbitals. Thirdly, the NDDO (Neglect of Diatomic Differential Overlap) approximation assumes zero differential overlap between atomic orbitals on different atoms, retaining only two-centre, two-electron integrals. PM6 improves the NDDO approximation by fine-tuning core-core interaction parameters and extending $d$-orbitals to the basis set for main group elements, yielding much more accurate results~\cite{stewart2007optimization}.
+
+DFT offers an alternative route to solve the electronic Schrödinger equation using the electron density approach. According to the Hohenberg–Kohn theorem~\cite{hohenberg1964inhomogeneous}, the ground-state energy is a unique functional of the electron density, and the Kohn–Sham formulation allows this energy to be computed using the orbitals of an auxiliary non-interacting system~\cite{kohn1965self}. In practical calculations, the exact exchange–correlation functional is unknown and must be approximated. 
+
+In contrast to semi-empirical and \textit{ab initio} methods, DFT tends to offer improved thermochemistry and barrier heights for many organic reactions, making it particularly suitable for mapping PES and characterising TS~\cite{lynch2001well}. The B3LYP hybrid functional, one of the most widely used DFT methods, is formed by combining Becke’s three-parameter exchange~\cite{becke1993density} with the Lee–Yang–Parr correlation functional~\cite{lee1988development} and is validated for molecular properties by Stephens et al.~\cite{stephens1994ab}. The incorporation of a fixed fraction of Hartree–Fock exchange improves the description of reaction barriers, while the gradient-corrected correlation functional enhances the accuracy of thermochemical predictions. When paired with the 6-31G(d) basis set~\cite{hehre1972self,hariharan1973influence}, B3LYP provides a good compromise between computational efficiency (though the running time is still at least several times longer compared to semi-empirical methods) and reliability.
+This combination is, therefore, widely chosen for exploratory reaction mechanism studies, including the optimisation of TS and the generation of PES profiles.
+
+In this study, the PES and stationary points were computed using \textit{Gaussian 16} program~\cite{g16} with \textit{GaussView 6}~\cite{gv6} as a visualisation tool. Geometries were optimised at PM6 semi-empirical level and B3LYP/6-31G(d) DFT level of theory, and all stationary points were characterised by analytic frequency calculations to confirm that they correspond to minima or first-order saddle points on the PES.
+
+% =========================================================
+% 2. Exercises / Results & Discussion (~60%)
+% =========================================================
+\section{Exercises, Results and Discussion} % ~60\%
+
+% You can structure this as one section with multiple subsections,
+% typically one per exercise in the computational script/worksheet.
+\subsection{Validation of Geometry Optimisation Results}
+A variety of analyses can be conducted to confirm the validity of the simulations. The procedures illustrated below are applicable to all the systems studied.
+
+For the true energy minima (i.e., reactants and products), the geometry optimisation should satisfy all convergence criteria, including maximum and root-mean-square (RMS) force (reflecting the current residual forces acting on the atoms) and maximum and RMS displacement (illustrating the displacement of atoms from the last optimisation step), all of which must fall below a certain threshold defined in \textit{Gaussian}. The predicted change in energy should also be sufficiently small (usually below 10$^{-10}$ Hartree), confirming that an extremum has been reached. Additionally, all computed vibrational frequencies should be positive, which indicates the correct correspondence between the structure and the local minimum on the PES. If all of the conditions above are met, \textit{Gaussian} prints ``Stationary point found" in the output file of the simulation. The resulting geometries of the molecules can then be compared with literature values to verify correctness.
+
+The geometry convergence criteria for TS are identical to those stated above; however, the frequency analysis should yield exactly one imaginary frequency corresponding to the motion along the reaction coordinate (i.e., the bond-forming or bond-breaking, ring-closing in our cases). The forming bonds in TS should be much longer than those of a normal covalent bond, approximately in the range of 1.95$-$2.28~\AA{} for typical Diels-Alder reactions~\cite{houk1992transition}. An IRC calculation can then be performed from TS to confirm that the TS indeed connects the correct reactant and product minima.
+
+Together, these checks confirm that the reactants, products, and TS used in this study correspond to the correct stationary points on the PES and accurately represent the chemical species involved.
+
+\subsection{Exercise 1: Reaction of Butadiene with Ethylene}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Figures/Reaction Schemes/Exercise 1 Reaction Scheme.png}
+    \captionsetup{width=0.9\linewidth}
+    \caption{Reaction scheme for DA cycloaddition of butadiene-ethene.}
+    \label{fig:reaction=scheme-exericse1}
+\end{figure}
+
+The reactants, products and TS were calculated at both PM6 and B3LYP/6-31G(d) levels of theory. Applying the validation procedures outlined above, the reactants, product, TS, and IRC for Exercise 1 were confirmed to be correct at both the PM6 and B3LYP/6-31G(d) levels of theory. All geometry optimisations satisfied the required convergence criteria, with maximum and RMS forces and displacements falling well below the Gaussian thresholds; the predicted change in energy for each optimised structure was on the order of 10$^{-10}$ Hartree or below, consistent with convergence to a stationary point. The TS exhibited exactly one imaginary frequency, and upon performing IRC calculations in both directions, TS was shown to correctly connect between the expected reactant and product minima, confirming that the correct pathway was identified.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 1/butadiene_structure.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 1/ethene_structure.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 1/TS_structure.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 1/cyclohexene_structure.png}
+        \caption{}
+    \end{subfigure}
+    \captionsetup{width=1\linewidth}
+    \caption{Simulated geometries of (a) butadiene, (b) ethene, (c) TS, and (d) cyclohexene obtained from PM6 and B3LYP/6-31G(d) optimisations. Carbon atoms are labelled C1–C6 in each structure; these labels correspond directly to the bond definitions used in Table~\ref{tab:bond_lengths}.}
+    \label{fig:simulated-structures-1}
+\end{figure}
+
+The bond length data in Table~\ref{tab:bond_lengths} show that both PM6 and B3LYP/6-31G(d) reproduce the expected structural features of the DA reaction with good accuracy. For the isolated reactants, the computed C=C distances agree closely with experimental values, typically within 10$^{-3}$$–$10$^{-2}$~\AA{}. This level of agreement is consistent with the known performance of semi-empirical and DFT methods for conjugated systems. The C–C single bond in butadiene (C4–C5) is also well captured: both computational methods slightly overestimate the experimental value of 1.454~\AA{}, but they remain within the expected accuracy range. For reference, standard covalent radii give approximate values of 1.54 \AA{} for sp$^3$–sp$^3$ C–C single bonds, 1.50 \AA{} for sp$^3$–sp$^2$ bonds and 1.34 \AA{} for sp$^2$–sp$^2$ bonds, while the van der Waals radius of a carbon atom is 1.70 \AA{}~\cite{CRC105}.
+
+\begin{table}[H]
+\centering
+\small
+\captionsetup{width=1\linewidth}
+\caption{Comparison of bond lengths (in \AA{}, 4 d.p.) for the labelled bonds shown in Figure~\ref{fig:simulated-structures-1}. C1–C6 atom numbering is taken directly from the simulated geometries. PM6 and B3LYP/6-31G(d) values are reported alongside experimental measurements where available.}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{lccc}
+\hline
+\textbf{Bond} & \textbf{PM6} & \textbf{B3LYP/6-31G(d)} & \textbf{Exp.} \\
+\hline
+\multicolumn{4}{l}{\textbf{Reactants}} \\
+C1=C2 & 1.3273 & 1.3309 & 1.3305~\cite{craig2006equilibrium} \\
+C3=C4 & 1.3334 & 1.3392 & 1.338~\cite{craig2006equilibrium} \\
+C5=C6 & 1.3334 & 1.3392 & 1.338~\cite{craig2006equilibrium} \\
+C4–C5 & 1.4708 & 1.4702 & 1.454~\cite{craig2006equilibrium} \\
+\hline
+\multicolumn{4}{l}{\textbf{TS}} \\
+C1-C6 & 2.1147 & 2.2721 & 1.95-2.28~\cite{houk1992transition} \\
+C2-C3 & 2.1147 & 2.2721 & 1.95-2.28~\cite{houk1992transition} \\
+C1=C2 & 1.3818 & 1.3861 & – \\
+C3=C4 & 1.3798 & 1.3831 & – \\
+C4-C5 & 1.4111 & 1.4072 & – \\
+C5=C6 & 1.3798 & 1.3831 & – \\
+\hline
+\multicolumn{4}{l}{\textbf{Products}} \\
+C1-C6 & 1.5372 & 1.5374 & 1.515~\cite{chiang1969molecular}\\
+C2-C3 & 1.5372 & 1.5374 & 1.515~\cite{chiang1969molecular} \\
+C1-C2 & 1.5346 & 1.5349 & 1.550~\cite{chiang1969molecular} \\
+C3-C4 & 1.5008 & 1.5099 & 1.504~\cite{chiang1969molecular} \\
+C4=C5 & 1.3370 & 1.3371 & 1.335~\cite{chiang1969molecular} \\
+C5-C6 & 1.5008 & 1.5099 & 1.504~\cite{chiang1969molecular} \\
+\hline
+\end{tabular}
+}
+\label{tab:bond_lengths}
+\end{table}
+
+Both PM6 and B3LYP/6-31G(d) yield predictions of the forming C1–C6 and C2–C3 bonds to be within the typical range reported for DA TS structures (1.95–2.28 \AA{}~\cite{houk1992transition}). These distances are substantially longer than a normal $\sigma$-bond but far shorter than 2$r_\mathrm{vdW}$, confirming that the nascent bonds exhibit orbital overlap to a certain degree. The internal C=C and C–C bond lengths also show the expected ``reactive distortion,'' i.e., a partial loss of $\pi$ character in the dienophile and a partial gain of $\sigma$ character in the forming bonds. The vibrational analysis reflected the synchronous nature of bond formation, which can also be validated in the IRC simulation.
+
+The product geometries were likewise well reproduced. The retained C4=C5 double bond matches the experiment to within 10$^{-3}$ Å. The newly formed $\sigma$ bonds, C1–C6 and C2–C3, were calculated to be approximately 1.54~\AA{}, close to the experimental C–C single-bond length in cyclohexene, with modest errors. Overall, the systematic trends from reactants to TS to products are internally consistent, chemically meaningful, and in strong agreement with experiments, reinforcing that the optimised structures correctly describe the underlying pericyclic reaction pathway.
+
+An MO diagram of TS can be constructed using the Frontier Molecular Orbital (FMO) approach, where the HOMO of butadiene and the LUMO of ethene constructively overlap, as shown in Figure~\ref{fig:exdercise1-reaction=MO}. All relevant computed MO surfaces are included in the Supporting Information (Figure~\ref{fig:simulated-MOs-1}) for completeness.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{Figures/Plotted MO/Exercise 1 MO Diagram.png}
+    \captionsetup{width=1\linewidth}
+    \caption{MO diagram for the TS of the DA reaction between butadiene and ethene, computed at PM6 level. The HOMO and LUMO of each reactant (left and right) combine to generate four FMO at the TS (centre). Symmetry labels (s = symmetric, a = antisymmetric) are assigned with respect to the mirror plane of the reacting $\pi$ system. Electron occupancies are indicated with arrows. Relevant MO energy listings are provided in Table~\ref{tab:SI-Exercise1-FMO-TS-products-PM6}.}
+    \label{fig:exdercise1-reaction=MO}
+\end{figure}
+
+The orbital interactions in Figure~\ref{fig:exdercise1-reaction=MO} reveal the symmetry requirements of pericyclic reactions. A reaction is considered symmetry-allowed when the interacting orbitals possess compatible symmetry with a non-zero overlap integral. Conversely, if the interacting orbitals have incompatible symmetry, the overlap integral becomes zero, and the reaction is symmetry-forbidden under thermal conditions. Specifically, for two-orbital interactions, symmetric-symmetric and antisymmetric-antisymmetric pairs yield non-zero overlap and allowed reactions, whereas symmetric-antisymmetric pairs lead to zero overlap and forbidden reactions. 
+
+In the present DA reaction, the HOMO of butadiene and LUMO of ethene share the same phase symmetry along the forming bond axis, producing a constructive symmetric–symmetric interaction (and symmetric–antisymmetric for the other combination). Since the symmetry match exhibits non-zero overlap, the cycloaddition is allowed under thermal conditions, which is consistent with the Woodward–Hoffmann rules predicting the viability of the Diels-Alder [4+2] reaction.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{Figures/Reaction Profiles/Exercise 1_Reaction Profile_enthalpy.png}
+    \captionsetup{width=1\linewidth}
+    \caption{Reaction profile (RP) of enthalpies for the butadiene-ethene DA cycloadditon, computed at the PM6 and B3LYP/6-31G(d) levels of theory at 298.15 K. The total enthalpy of the separated reactants is taken as the zero of energy. Activation enthalpies and reaction enthalpies are shown relative to this reference.}
+    \label{fig:reaction=profile-exericse1}
+\end{figure}
+
+The RP computed using both levels of theory is shown in Figure~\ref{fig:reaction=profile-exericse1}. At 298 K, PM6 and B3LYP/6-31G(d) yielded activation enthalpies of 112.9 and 83.4 kJ mol$^{-1}$, respectively, resulting in a difference of 29.5 kJ/mol between the two methods (in comparison, the difference in the enthalpy of reaction is only 8.1 kJ mol$^{-1}$). High-level MRAQCC \textit{ab initio} calculations report an activation enthalpy of 23.14 kcal mol$^{-1}$ (96.8 kJ mol$^{-1}$) for this reaction~\cite{lischka2004diels}, illustrating that both methods exhibit errors of close to $\pm$15~\%. Between the two levels of theory used here, B3LYP/6-31G(d) is expected to give (and actually gives) a more reliable reaction barrier: DFT provides a fundamentally better description of electron correlation than semi-empirical methods, and the split-valence 6-31G(d) basis set offers a more realistic representation of the TS geometry compared with the minimal valence basis embedded in PM6. Accordingly, B3LYP/6-31G(d) resulted in a barrier that lies closer to the MRAQCC reference than the PM6 result, though the difference is not substantial.
+
+The calculated activation barriers are subject to several sources of discrepancy when compared to experimental values. First, both DFT and semi-empirical methods introduce systematic errors that are highly sensitive to the level of electron correlation and basis-set quality~\cite{zhao2004tests,curtiss1998gaussian}. Semi-empirical PM6 neglects much of the electron correlation, while B3LYP/6-31G(d) is known to systematically underestimate barrier heights due to delocalisation and self-interaction errors. Secondly, experiments measure free energies under real thermodynamic conditions (solution, solvent interactions, etc.), where the data is processed with often complex kinetic fits in data analysis~\cite{truhlar1980variational}. In contrast, the computed values correspond to an idealised gas-phase model at a single temperature without explicit environmental effects. Therefore, the experimental activation barriers may not correspond exactly to the isolated molecular species simulated computationally.
+
+% ---------------------------------------------------------
+\subsection{Exercise 2: Reaction of Cyclohexadiene and 1,3-Dioxole}
+
+% - Show simulated IR spectra and compare to experimental data if available.
+% - Comment on key peaks (e.g. C=O stretch, characteristic ring modes).
+% - Explain any systematic shifts (e.g. scaling factors, harmonic approximation).
+The simulation of the cyclohexadiene-1,3-dioxole system was performed at PM6 level for computational efficiency reasons, where the reaction scheme is shown in Figure~\ref{fig:reaction=scheme-exericse2}. The endo/exo diastereoselectivity in this reaction arises from secondary orbital interactions in the TS, where $\pi$-accepting substituents on the dienophile can interact with the $\pi$ system of the diene, favouring the endo orientation~\cite{fernandez2014origin}. The simulated MOs are included for reference (Supporting Information, Figure~\ref{fig:simulated-MOs-2}).
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{Figures/Reaction Schemes/Exercise 2 Reaction Scheme.png}
+    \captionsetup{width=0.9\linewidth}
+    \caption{Reaction scheme for DA cycloaddition of cyclohexadiene–1,3-dioxole.}
+    \label{fig:reaction=scheme-exericse2}
+\end{figure}
+
+The MO diagrams can then be constructed at PM6 level from the simulated MOs for endo and exo reactions, with the detailed energy levels provided in Table~\ref{tab:SI-Exercise2-FMO-TS-products}. Since the orbital energies from PM6 are not quantitatively transferable across different molecular species, the MO diagrams are presented schematically, with numerical eigenvalues reported only in the SI. The diagrams illustrate the relative ordering and qualitative FMO interactions relevant to the cycloaddition. The aforementioned secondary orbital interactions can be clearly shown in Figure~\ref{fig:exercise2-MO-diagrams} (indicated by blue dashed lines). The two relevant FMO gaps are HOMO(diene)–LUMO(dienophile) and HOMO(dienophile)–LUMO(diene), with energy gaps of 0.34535 and 0.34596 Eh. The inverse-demand preference is therefore extremely small (by 0.00061 Eh, ~0.017 eV), indicating a marginal inverse-demand character. However, since the two gaps are almost identical, the reaction is overall best described as a nearly symmetric DA cycloaddition with a very small inverse-demand bias. From the FMO theory, an electron-rich diene reacting with an oxygen-containing (electron-poor) dienophile would typically be expected to follow a normal-demand pathway, which is dominated by HOMO(diene)–LUMO(dienophile) interactions. The tiny reversal suggested by the PM6 gaps is well within the expected error of the semi-empirical method and should, therefore, be interpreted cautiously.
+
+\begin{figure}[h!]
+\centering
+
+\begin{subfigure}[b]{1\linewidth}
+    \centering
+    \includegraphics[width=1\linewidth]{Figures/Plotted MO/Exercise 2 endo-TS MO Diagram.png}
+    \caption{Endo TS}
+    \label{fig:exercise2-endo-TS}
+\end{subfigure}
+
+\begin{subfigure}[b]{1\linewidth}
+    \centering
+    \includegraphics[width=1\linewidth]{Figures/Plotted MO/Exercise 2 exo-TS MO Diagram.png}
+    \caption{Exo TS}
+    \label{fig:exercise2-exo-TS}
+\end{subfigure}
+
+\captionsetup{width=0.98\linewidth}
+\caption{MO diagrams for cyclohexadiene–1,3-dioxole DA reaction. 
+The HOMO and LUMO of each reactant combine to generate four FMOs at the TS. Full MO energy listings are provided in Table~\ref{tab:SI-Exercise2-FMO-TS-products}.}
+\label{fig:exercise2-MO-diagrams}
+\end{figure}
+
+\begin{table}[h!]
+\centering
+\small
+\captionsetup{width=0.9\linewidth}
+\caption{Free energies at 298.15 K for the cyclohexadiene–1,3-dioxole DA reaction.}
+\label{tab:exercise2-free-energies}
+\begin{tabular}{l c}
+\toprule
+\textbf{Species} & \textbf{G (kJ mol$^{-1}$)} \\
+\midrule
+Cyclohexadiene reactant & 306.8 \\
+1,3-Dioxole reactant    & $-$137.3 \\
+Exo TS                  & 364.6 \\
+Endo TS                 & 362.2 \\
+Exo product             & 99.7 \\
+Endo product            & 99.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The absolute free energies of each structure were calculated and listed in Table~\ref{tab:exercise2-free-energies}. The reaction barriers for endo and exo pathways were computed to be 192.6 and 195.1 kJ mol$^{-1}$, respectively. Although these values are higher than typical DA reactions (ca. 40-125 kJ mol$^{-1}$~\cite{sarotti2014unraveling}), the relative difference is small (2.5 kJ mol $^{-1}$), indicating only a marginal kinetic preference for the endo pathway and, therefore, the endo product. In contrast, the calculated reaction free energies suggest that the endo adduct is thermodynamically favoured by 0.4 kJ mol$^{-1}$ (endo: $-$70.3 KJ mol$^{-1}$, exo: $-$69.9 mol$^{-1}$). Given that both $\Delta\Delta$G$^\ddagger$ and $\Delta\Delta$$_\mathrm r$G are well within the expected error of the method, the two pathways should be regarded as essentially isoenergetic and both products as accessible, with no strong preference predicted.
+
+
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{Figures/Reaction Profiles/Exercise_2_Reaction_Profile_free_energy.png}
+    \captionsetup{width=1\linewidth}
+    \caption{RP (free energy) of cyclohexadiene–1,3-dioxole DA reaction at 298.15 K, showing endo and exo pathways. Total Gibbs free energy of the separated reactants is taken as the zero of energy.}
+    \label{fig:reaction=profile-exericse2}
+\end{figure}
+
+
+% ---------------------------------------------------------
+\subsection{Exercise 3: Reaction of \textit{o}-xyly-ene and SO$_2$}
+
+% - Present relative energies (ΔG, ΔE) of reactants, transition states, and products.
+% - Use a reaction energy diagram (free-energy profile).
+% - Explain which pathway is favoured and why.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{Figures/Reaction Schemes/Exercise 3 Reaction Scheme.png}
+    \captionsetup{width=1\linewidth}
+    \caption{Reaction scheme for DA cycloaddition of \textit{o}-xylylene-SO$_2$.}
+    \label{fig:reaction=scheme-exericse3}
+\end{figure}
+
+The structures corresponding to three possible reaction paths, cheletropic, endo, and exo DA in \textit{o}-xylyene-SO$_2$ system (shown in Figure~\ref{fig:reaction=scheme-exericse3}) were simulated at the PM6 level, respectively. The RP can then be constructed, with the total free energies of the reactants set to 0 for comparison. It is found that the cheletropic reaction path yields the most negative reaction energy ($-$156.0 kJ mol$^{-1}$) among all the possible routes (c.f. endo path $-$99.0 and exo path $-$83.9 kJ mol$^{-1}$). This is possibly due to the fact that two strong C-S $\sigma$ bonds are formed while two strong S=O $\pi$ bonds are retained in this reaction path, making the system highly exergonic. With diffused 3$p$ and low-lying 3$d$ orbitals, the sulphur atom can stabilise the electron density from \textit{o}-xylyene very well by acting as a strong $\pi$-acceptor. Together, these effects make the cheletropic product the most thermodynamically favoured. 
+
+The exo reaction path, on the other hand, exhibits the lowest reaction barrier (85.7 kJ mol$^{-1}$; c.f. 104.1 and 138.5 kJ mol$^{-1}$ for cheletropic and endo reactions). Inspection of the exo TS (Figure~\ref{fig:simulated-MOs-3}) shows that the SO$_2$ fragment approaches from the outer face of the \textit{o}-xylylene ring, with one oxygen atom directed away from the aromatic core at all times. This orientation minimises the steric repulsion and requires the least structural distortion, where the endo and cheletropic TS force the SO$_2$ group into a more congested region. The exo product is therefore the kinetic product among the three.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{Figures/Reaction Profiles/Exercise_3_Reaction_Profile_free_energy.png}
+    \captionsetup{width=1\linewidth}
+    \caption{RP (free energy) of the competing DA and cheletropic pathways in the reaction between \textit{o}-xylylene and SO$_2$, computed using the PM6 method at 298.15 K. The total Gibbs free energy of the separated reactants is taken as the zero of energy.}
+    \label{fig:reaction=profile-exericse3}
+\end{figure}
+
+From the mechanistic perspective, o-xylylene is inherently unstable due to the loss of aromatic stabilisation, partial diradical character, and structural strain. As a consequence, every reaction path is more strongly exergonic. Along each pathway in the IRC calculation, the benzene core of \textit{o}-xylyene fragment retains planarity with minimal distortion, while the two exocyclic methylene units undergo most of the geometrical changes with the approaching SO$_2$ fragment. It is worth mentioning that the cheletropic IRC shows synchronous formation of C-S bonds in the reaction path. This obviously could not be the case for DA reactions, since the two reacting atoms are different (O and S). It is proposed that, from the IRC pathways, the initial orientation of SO$_2$ towards \textit{o}-xylylene dictates which pathway (endo, exo, or cheletropic) the system follows, with each spatial arrangement leading to a different reaction valley on the PES.
+
+% =========================================================
+% 3. Conclusions (~20%)
+% =========================================================
+\section{Conclusions}
+
+In this study, the geometries, TS, MO and RP of three representative pericyclic reactions were characterised using \textit{Gaussian} at the semi-empirical PM6 and DFT B3LYP/6-31G(d) levels of theory. Across all exercises, both methods reproduced the expected structural trends, with bond-length errors typically within 10$^{-3}$~\AA{}. 
+
+In Exercise 1, the DA reaction between butadiene and ethene displayed forming-bond distances characteristic of concerted [4+2] cycloadditions (1.95-2.28~\AA{}), and the computed barriers (112.9 kJ mol$^{-1}$ at PM6, 83.4 kJ mol$^{-1}$ at B3LYP) exhibited modest errors compared to the high-level MRAQCC benchmark (96.8 kJ mol$^{-1}$). FMO analysis confirmed the expected symmetry requirements for thermally-allowed pericyclic reaction systems, where a non-zero orbital overlap integral is a necessity. In Exercise 2, endo and exo TS for the cyclohexadiene–1,3-dioxole reaction were successfully located, and both pathways were predicted to be nearly isoenergetic, with $\Delta\Delta\mathrm{G}^{\ddag} \approx 2.5\ \mathrm{kJ\ mol}^{-1}$ and $\Delta\Delta_\mathrm{r}\mathrm{G} \approx 0.4\ \mathrm{kJ\ mol}^{-1}$. The endo adduct was determined to be marginally favourable both kinetically and thermodynamically. The FMO gaps differed by only 0.00061 Eh, indicating a nearly symmetric but marginally inverse-demand cycloaddition. In Exercise 3, the reaction of \textit{o}-xylylene with SO$_2$ yielded three distinct TS corresponding to endo, exo, and cheletropic pathways. The cheletropic route was the most exergonic ($–$156 kJ mol$^{-1}$) due to the simultaneous formation of two strong C–S $\sigma$ bonds with the retention of S=O $\pi$ bonding, whereas the exo pathway exhibited the lowest barrier (85.7 kJ mol$^{-1}$) as SO$_2$ approached the least sterically congested face of the xylylene ring. IRC calculations across the three exercises validated the mechanistic assignments by connecting each TS cleanly to its corresponding reactant and product minima and by demonstrating sensible reaction processes.
+
+Taken together, the results highlight the characteristic features of pericyclic chemistry across complex systems. Exercise 1 demonstrates a textbook basic DA reaction with strong FMO control, and Exercise 2 illustrates how subtle substituent and orbital effects produce nearly isoenergetic endo and exo pathways. Exercise 3 further shows how loss of aromaticity, diradical character, and substituent asymmetry can open competing mechanistic channels, including a strongly exergonic cheletropic pathway. These findings reinforce the central role of orbital symmetry, sterics, and thermodynamics in governing the reactivity of pericyclic systems. 
+
+Of the two computational methods employed, B3LYP/6-31G(d) provided more reliable TS geometries and energetics, reproducing high-level benchmark barriers more accurately. PM6, while useful for rapid computing, consistently overestimated absolute free energies in bimolecular processes. However, both methods, being gas-phase and harmonic, failed to provide quantitatively accurate activation free energies, although they reproduced qualitative trends, relative barriers, and stereochemical preferences predicted theoretically. Overall, the calculations were most reliable for structural and orbital analyses but less so for absolute thermochemistry.
+
+The TS optimisation is highly sensitive to the initial spatial arrangement of the reactants; small deviations in starting geometries could lead to very different optimised structures. This difficulty is especially pronounced for larger, more complex, and flexible systems due to the increasing number of degrees of freedom and the fact that many approaches lie very close in energy compared to simpler ones, producing a flatter PES. This makes the identification of the real TS much more difficult and time-consuming. Sometimes, the optimisation would either fail to locate a TS, or collapse into a structure that is totally unintended and irrelevant. Fortunately, these problems can be (partially) alleviated by the function of freezing, where various key parameters, e.g., characteristic bond lengths and bond angles, can be temporarily frozen to simplify the spatial displacements across the simulation before final refinement.
+
+As mentioned above, the simulations were carried out by viewing the reactions as isolated gaseous bimolecular collisions throughout the entire study. Such calculations do not take the practical factors, including solvent effects, concentration dependence, and compound states into account. As a result, the ``absolute'' value of enthalpies and free energies can not be viewed quantitatively, and the relative values should also be taken cautiously. These simulations also fail to serve as a guideline to optimise practical reaction conditions, i.e., modification of temperature, concentration, solvent, etc. Nevertheless, they are valuable for the study of the qualitative trends of the systems of interest, where information on stereoselectivity, relative reaction barriers, and reaction processes can be extracted, guiding the intuition of reactivities. The simulations can also serve as a gauge for the improvement and optimisation of the reactions by examining the computed MO energies and thermochemical values, where suitable reactants can be selected for more kinetically efficient reaction paths (less strict reactant orientation requrirements, lower reaction barriers) and thermodynamically more stabilised products, thereby increasing the efficiency and yield of the pericyclic reactions. Specifically, from a theoretical viewpoint, electron-donating groups on dienes and electron-withdrawing groups on dienophiles could speed up normal-demand Diels-Alder reaction, and endo/exo preference can be tuned by modifying the steric clash and the addition of $\pi$-system to promote the secondary orbital interaction. All of these factors can be simulated and examined through computational studies, enabling the prediction of reactivity and selectivity trends and guiding the design of modified substrates.
+
+The simulations in this work were limited by both the accuracy of the underlying theories and the available computational resources. Therefore, future work includes improving the accuracy of the theoretical treatment, either by adopting a higher-level electronic structure method with larger basis sets or by incorporating additional effects such as dispersion and solvent stabilisation. Further refinement could be achieved through benchmarking against experimental activation parameters, performing systematic conformational searches for all stationary points~\cite{goodman1991unbounded}, or using modern composite approaches such as DLPNO-CCSD(T)~\cite{vcivzek1966correlation,purvis1982full} to obtain quantitatively dependable energetics.
+
+    
+% =========================================================
+% References
+% =========================================================
+%\section*{References}
+{\small
+\bibliographystyle{achemso}
+\bibliography{references}
+}
+
+\onecolumn 
+
+\newpage
+\section*{Supporting Information} 
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\setcounter{table}{0}
+\renewcommand{\thetable}{S\arabic{table}}
+\setcounter{page}{1}
+\renewcommand{\thepage}{S\arabic{page}}
+%Exercise 1 MOs
+\begin{figure}[h]
+    \centering
+     % ---- Reactant FMOs ----
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 1/butadiene_PM6_HOMO.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 1/butadiene_PM6_LUMO.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 1/ethene_PM6_HOMO.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 1/ethene_PM6_LUMO.png}
+        \caption{}
+    \end{subfigure}
+     % ---- TS FMOs ----
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 1/TS HOMO-1.png}
+        \caption{}
+    \end{subfigure}    
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 1/TS HOMO.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 1/TS LUMO.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 1/TS LUMO+1.png}
+        \caption{}
+    \end{subfigure}
+    \captionsetup{width=1\linewidth}
+    \caption{FMOs relevant to the DA reaction in Exercise~1. The first row shows the butadiene HOMO and LUMO followed by the ethene HOMO and LUMO. The second row shows the four key $\pi$-type orbitals of the TS (HOMO–1, HOMO, LUMO, and LUMO+1), which arise from linear combinations of the reactant FMOs and illustrate the orbital symmetry and overlap responsible for bond formation.}
+    \label{fig:simulated-MOs-1}
+\end{figure}
+
+{
+%Exercise 2 Structures
+\begin{figure}[t!]
+    \centering
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 2/cyclohexadiene_structure.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 2/1,3-dioxole_structure.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 2/TS_endo_exercise2_structure.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 2/TS_exo_exercise2_structure.png}
+        \caption{}
+    \end{subfigure}    
+    
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 2/product_endo_exercise2_structure.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 2/TS_exo_exercise2_structure.png}
+        \caption{}
+    \end{subfigure}
+    \captionsetup{width=1\linewidth}
+    \caption{Optimised structures relevant to the Diels--Alder reaction in Exercise~2. The first row shows the simulated structures of cyclohexadiene, 1,3-dioxole and endo and exo TS. The second row shows the corresponding endo and exo products.}
+    \label{fig:simulated-structures-2}
+\end{figure}
+\vspace{-1em}
+%Exercise 3 Structures
+\begin{figure}[t!]
+    \centering
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 3/o-xylyene_structure.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 3/SO2_structure.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 3/TS_endo_exercise3_structure.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 3/TS_exo_exercise3_structure.png}
+        \caption{}
+    \end{subfigure}    
+    
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 3/TS_cheletropic_exercise3_structure.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 3/Product_endo_exercise3_structure.png}
+        \caption{}
+    \end{subfigure}
+      \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 3/Product_exo_exercise3_structure.png}
+        \caption{}
+    \end{subfigure}
+      \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Structures/Exercise 3/Product_cheletropic_exercise3_structure.png}
+        \caption{}
+    \end{subfigure}
+    \captionsetup{width=1\linewidth}
+    \caption{Optimised structures relevant to the Diels--Alder and cheletropic reaction in Exercise~3. The first row shows the simulated structures of \textit{o}-xylyene, SO$_2$, and endo and exo TS. The second row shows the cheletropic-transitions state and corresponding endo, exo and cheletropic products.}
+    \label{fig:simulated-structures-3}
+\end{figure}
+}
+\clearpage
+%Exercise 2 MOs
+\begin{figure}[t!]
+    \centering
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/cyclohexadiene_HOMO.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/cyclohexadiene_LUMO.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/1,3-dioxole_HOMO.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/1,3-dioxole_LUMO.png}
+        \caption{}
+    \end{subfigure}
+    
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/Endo_TS HOMO-1 0.01.png}
+        \caption{}
+    \end{subfigure}    
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/Endo_TS HOMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/Endo_TS LUMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/Endo_TS LUMO+1 0.01.png}
+        \caption{}
+    \end{subfigure}
+
+      \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/Exo_TS HOMO-1 0.01.png}
+        \caption{}
+    \end{subfigure}    
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/Exo_TS HOMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/Exo_TS LUMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 2/Exo_TS LUMO+1 0.01.png}
+        \caption{}
+    \end{subfigure}
+    
+    \captionsetup{width=1\linewidth}
+    \caption{FMOs relevant to the Diels--Alder reaction in Exercise~2. The first row shows the HOMO and LUMO of cyclohexadiene and 1,3-dioxole. The second and third rows show the corresponding $\pi$-type orbitals (HOMO--1, HOMO, LUMO, and LUMO+1) for the endo and exo TS, respectively. These TS orbitals arise from the interaction of the reactant FMOs and illustrate the differences in symmetry, overlap, and electron distribution that distinguish the endo and exo pathways.}
+    \label{fig:simulated-MOs-2}
+\end{figure}
+
+\clearpage
+
+
+\clearpage
+%Exercise 3 MOs
+\begin{figure}[t!]
+    \centering
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/o-xylyene HOMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/o-xylyene LUMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/SO2 HOMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/SO2 LUMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+    
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_endo HOMO-1 0.01.png}
+        \caption{}
+    \end{subfigure}    
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_endo HOMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_endo LUMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_endo LUMO+1 0.01.png}
+        \caption{}
+    \end{subfigure}
+
+      \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_exo HOMO-1 0.01.png}
+        \caption{}
+    \end{subfigure}    
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_exo HOMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_exo LUMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_exo LUMO+1 0.01.png}
+        \caption{}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_Cheletropic HOMO-1 0.01.png}
+        \caption{}
+    \end{subfigure}    
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_Cheletropic HOMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_Cheletropic LUMO 0.01.png}
+        \caption{}
+    \end{subfigure}
+     \begin{subfigure}[b]{0.23\textwidth}
+        \includegraphics[width=\linewidth]{Figures/Raw MO/Exercise 3/TS_Cheletropic LUMO+1 0.01.png}
+        \caption{}
+    \end{subfigure}
+    \captionsetup{width=1\linewidth}
+    \caption{FMOs relevant to the Diels--Alder and cheletropic reaction in Exercise~3. The first row shows the HOMO and LUMO of \textit{o}-xylyene and SO$_2$. The second and third rows show the corresponding $\pi$-type orbitals (HOMO--1, HOMO, LUMO, and LUMO+1) for the endo and exo TS, respectively. The fourth row shows the corresponding $\pi$-type orbitals (HOMO-1, HOMO, LUMO, and LUMO+1) for the cheletropic TS. These TS orbitals arise from the interaction of the reactant FMOs and illustrate the differences in symmetry, overlap, and electron distribution that distinguish the endo, exo and cheletropic pathways.}
+    \label{fig:simulated-MOs-3}
+\end{figure}
+
+%Exercise 1 FMO values
+\begin{table}[h!]
+\captionsetup{width=0.8\linewidth}
+\centering
+\caption{FMO energies (in atomic units, Eh) for the butadiene-ethene Diels--Alder reaction at PM6 level. Listed are HOMO and LUMO, and HOMO$-$1 and LUMO+1 where relevant for the key stationary points on the PES.}
+\label{tab:SI-Exercise1-FMO-TS-products-PM6}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Species (Eh)} & \textbf{HOMO$-$1 } & \textbf{HOMO } & \textbf{LUMO } & \textbf{LUMO+1} \\
+\midrule
+Butadiene (reactant) 
+  & % HOMO-1
+    & $-$0.35900
+    & 0.01944
+    & % LUMO+1
+\\
+Ethene (reactant) 
+  & 
+    & $-$0.39228
+    & 0.04256
+    & 
+\\
+\midrule
+TS 
+  & $-$0.32755
+    & $-$0.32533
+    & $-$0.01732
+    & 0.03067
+\\
+\midrule
+Product 
+  & 
+    & $-$0.34560
+    & 0.05574
+    & 
+\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\captionsetup{width=0.8\linewidth}
+\caption{FMO energies (in atomic units, Eh) for the butadiene-ethene Diels--Alder reaction at B3LYP/6-31G(d) level. Listed are HOMO and LUMO, and HOMO$-$1 and LUMO+1 where relevant for the key stationary points on the PES.}
+\label{tab:SI-Exercise1-FMO-TS-products-DFT}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Species (Eh)} & \textbf{HOMO$-$1 } & \textbf{HOMO } & \textbf{LUMO } & \textbf{LUMO+1} \\
+\midrule
+Butadiene (reactant) 
+  & % HOMO-1
+    & $-$0.23114
+    & $-$0.02281
+    & % LUMO+1
+\\
+Ethene (reactant) 
+  & 
+    & $-$0.26663
+    & 0.01879
+    & 
+\\
+\midrule
+TS 
+  & $-$0.22110
+    & $-$0.21893
+    & $-$0.00859
+    & 0.01958
+\\
+\midrule
+Product 
+  & 
+    & $-$0.23346
+    & 0.03417
+    & 
+\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%Exercise 2 FMO values
+\begin{table}[h!]
+\centering
+\captionsetup{width=0.85\linewidth}
+\caption{FMO energies (in atomic units, Eh) for the cyclohexadiene–1,3-dioxole Diels--Alder reaction at PM6 level. Listed are HOMO and LUMO, and HOMO$-$1 and LUMO+1 where relevant for the key stationary points on the PES.}
+\label{tab:SI-Exercise2-FMO-TS-products}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Species (Eh)} & \textbf{HOMO$-$1 } & \textbf{HOMO } & \textbf{LUMO } & \textbf{LUMO+1} \\
+\midrule
+Cyclohexadiene (reactant) 
+  & % HOMO-1
+    & $-$0.32140
+    & 0.02134
+    & % LUMO+1
+\\
+1,3-Dioxole (reactant) 
+  & 
+    & $-$0.32462
+    & 0.02395
+    & 
+\\
+\midrule
+Endo TS 
+  & $-$0.30845
+    & $-$0.29895
+    & 0.01633
+    & 0.01788
+\\
+Exo TS 
+  & $-$0.30820
+    & $-$0.30190
+    & 0.01160
+    & 0.01458
+\\
+\midrule
+Endo product 
+  & 
+    & $-$0.35035
+    & 0.03700
+    & 
+\\
+Exo product 
+  & 
+    & $-$0.35623
+    & 0.02851
+    & 
+\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%Exercise 3 FMO values
+\begin{table}[h!]
+\centering
+\captionsetup{width=0.8\linewidth}
+\caption{FMO energies (in atomic units, Eh) for the \textit{o}-xylyene-SO$_2$ Diels--Alder and cheletropic reaction at PM6 level. Listed are HOMO and LUMO, and HOMO$-$1 and LUMO+1 where relevant for the key stationary points on the PES.}
+\label{tab:SI-Exercise3-FMO-TS-products}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Species (Eh)} & \textbf{HOMO$-$1 } & \textbf{HOMO } & \textbf{LUMO } & \textbf{LUMO+1} \\
+\midrule
+\textit{o}-xylyene (reactant) 
+  & % HOMO-1
+    & $-$0.31570
+    & $-$0.02502
+    & % LUMO+1
+\\
+SO$_2$ (reactant) 
+  & 
+    & $-$0.36034
+    & $-$0.02178
+    & 
+\\
+\midrule
+Endo TS 
+  & $-$0.34323
+    & $-$0.34068
+    & $-$0.00595
+    & 0.00988
+\\
+Exo TS 
+  & $-$0.34388
+    & $-$0.31284
+    & $-$0.03882
+    & 0.01312
+\\
+Cheletropic TS
+  & $-$0.32986
+    & $-$0.28404
+    & $-$0.01945
+    & 0.02850
+\\
+\midrule
+Endo product 
+  & 
+    & $-$0.32888
+    & 0.00405
+    & 
+\\
+Exo product 
+  & 
+    & $-$0.32471
+    & $-$0.00609
+    & 
+\\
+Cheletropic product 
+  & 
+    & $-$0.35635
+    & 0.01882
+    & 
+\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\end{document}
