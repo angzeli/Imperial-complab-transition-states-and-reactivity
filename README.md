@@ -52,6 +52,8 @@ The analysis highlights **qualitative and quantitative differences** in reactivi
 ├── Simulated MOs/             # Gaussian MO outputs
 ├── Simulated Structures/      # Optimised geometries and TS structures
 ├── CompLab_TSR.pdf            # Final submitted report
+├── LICENSE
+├── README.md
 ```
 
 ---
